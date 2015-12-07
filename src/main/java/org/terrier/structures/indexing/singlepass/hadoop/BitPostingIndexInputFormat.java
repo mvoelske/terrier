@@ -60,8 +60,8 @@ import org.terrier.utility.io.HadoopPlugin;
 import org.terrier.utility.io.HadoopUtility;
 
 /** An InputFormat, i.e. MapReduce input reader, for a BitPostingIndex. Splits the main posting
- * file into generic InputSplits, according to the block size of the underlying file - i.e. the 
- * number of entries, or indeed postings, can be variable. 
+ * file into generic InputSplits, according to the block size of the underlying file - i.e. the
+ * number of entries, or indeed postings, can be variable.
  * The following JobConf properties are used:
  * <ul>
  * <li><tt>mapred.index.path</tt> and <tt>mapred.index.prefix</tt> - where to find the index.</li>
@@ -75,9 +75,9 @@ public class BitPostingIndexInputFormat extends FileInputFormat<IntWritable, Int
 	final static Logger logger = Logger.getLogger(BitPostingIndexInputFormat.class);
 	final static String BITPOSTING_STRUCTURE_KEY = "mapred.bitpostingindex.structure";
 	final static String BITPOSTING_LOOKUP_STRUCTURE_KEY = "mapred.bitpostingindex.lookup.structure";
-	
+
 	final static boolean REPLACE_DOCUMENT_INDEX = true;
-	
+
 	static class NullDocumentIndex implements DocumentIndex
 	{
 		int docs;
@@ -85,7 +85,7 @@ public class BitPostingIndexInputFormat extends FileInputFormat<IntWritable, Int
 		{
 			this.docs = numDocs;
 		}
-		
+
 		@Override
 		public DocumentIndexEntry getDocumentEntry(int docid)
 				throws IOException {
@@ -101,40 +101,40 @@ public class BitPostingIndexInputFormat extends FileInputFormat<IntWritable, Int
 		public int getNumberOfDocuments() {
 			return docs;
 		}
-		
+
 	}
-	
+
 	static class BitPostingIndexInputSplit extends FileSplit
 	{
 		/** start entry of split */
 		int startingEntryIndex;
 		/** number of entries in split */
 		int entryCount;
-		
-		/** Constructor for a split of a BitPosting structures, 
+
+		/** Constructor for a split of a BitPosting structures,
 		 * where the start and number of entries are specified */
 		public BitPostingIndexInputSplit(
-				Path file, 
+				Path file,
 				long start, long length,
 				String[] hosts, int _startingEntryIndex, int _entryCount) {
-			super(file, start, length, hosts);			
+			super(file, start, length, hosts);
 			startingEntryIndex = _startingEntryIndex;
 			entryCount = _entryCount;
 			logger.debug("new BitPostingIndexInputSplit: start at " + startingEntryIndex + " entries "+ _entryCount );
 		}
-		
+
 		/** default constructor, for serialization */
 		public BitPostingIndexInputSplit()
 		{
 			super(null, (long)0, (long)0, new String[0]);
 		}
-		
+
 		/** Start entry of the split */
 		public int getStartingEntryIndex()
 		{
 			return startingEntryIndex;
 		}
-	
+
 		/** Number of entries in split */
 		public int getEntryCount()
 		{
@@ -158,9 +158,9 @@ public class BitPostingIndexInputFormat extends FileInputFormat<IntWritable, Int
 			super.write(out);
 			WritableUtils.writeVInt(out, startingEntryIndex);
 			WritableUtils.writeVInt(out, entryCount);
-		}		
+		}
 	}
-	
+
 	static class BitPostingIndexRecordReader implements RecordReader<IntWritable, IntObjectWrapper<IterablePosting>>
 	{
 		/** id of first entry */
@@ -171,15 +171,15 @@ public class BitPostingIndexInputFormat extends FileInputFormat<IntWritable, Int
 		int entryCount = 0;
 		/** actual posting stream */
 		BitPostingIndexInputStream postingStream;
-		
+
 		BitPostingIndexRecordReader(BitPostingIndexInputStream _postingStream, int _entryIndex, int _entryCount)
 		{
 			this.postingStream = _postingStream;
 			this.startingEntryIndex = this.entryIndex = _entryIndex;
 			this.entryCount = _entryCount;
 			logger.info("new BitPostingIndexRecordReader: start at index " + entryIndex + " process "+ _entryCount + " entries" );
-		}		
-		
+		}
+
 		public void close() throws IOException {
 			this.postingStream.close();
 			logger.info("BitPostingIndexRecordReader: closing: started at "+startingEntryIndex +" now, at " + entryIndex );
@@ -206,7 +206,7 @@ public class BitPostingIndexInputFormat extends FileInputFormat<IntWritable, Int
 		}
 
 		public boolean next(IntWritable docid, IntObjectWrapper<IterablePosting> wrapperPostingList)
-				throws IOException 
+				throws IOException
 		{
 			//check if entryCount entries have been read
 			//count can be greater than entry count due to entry skipping
@@ -215,10 +215,10 @@ public class BitPostingIndexInputFormat extends FileInputFormat<IntWritable, Int
 			if (! postingStream.hasNext())
 				return false;
 			IterablePosting rtr = postingStream.next();
-			
+
 			//System.err.println("skipped=" + postingStream.getEntriesSkipped());
 			entryIndex += postingStream.getEntriesSkipped();
-			
+
 			if (rtr == null)
 			{
 				entryIndex++;
@@ -235,8 +235,8 @@ public class BitPostingIndexInputFormat extends FileInputFormat<IntWritable, Int
 
 	/** Get a record reader for the specified split */
 	public RecordReader<IntWritable, IntObjectWrapper<IterablePosting>> getRecordReader(
-				final InputSplit _split, final JobConf job, final Reporter reporter) 
-			throws IOException 
+				final InputSplit _split, final JobConf job, final Reporter reporter)
+			throws IOException
 	{
 		HadoopUtility.loadTerrierJob(job);
 		final BitPostingIndexInputSplit split = (BitPostingIndexInputSplit)_split;
@@ -247,36 +247,36 @@ public class BitPostingIndexInputFormat extends FileInputFormat<IntWritable, Int
 		if (REPLACE_DOCUMENT_INDEX)
 			IndexUtil.forceStructure(index, "document", new NullDocumentIndex(index.getCollectionStatistics().getNumberOfDocuments()));
 		final String bitPostingStructureName = job.get(BITPOSTING_STRUCTURE_KEY);
-		
+
 		final BitPostingIndexInputStream postingStream = (BitPostingIndexInputStream)index.getIndexStructureInputStream(bitPostingStructureName);
 		postingStream.skip(split.getStartingEntryIndex());
 		logger.info("BitPostingIndexRecordReader for structure "+ bitPostingStructureName + " start entry "+ split.getStartingEntryIndex() + " split size " + split.getEntryCount());
 		return new BitPostingIndexRecordReader(postingStream, split.getStartingEntryIndex(), split.getEntryCount());
 	}
-	
+
 	/** Returns the block size of the specified file. Only recommended to overload for testing */
 	protected long getBlockSize(Path path, FileStatus fss)
 	{
 		return fss.getBlockSize();
 	}
-	/** 
-	 * {@inheritDoc} 
+	/**
+	 * {@inheritDoc}
 	 */
 	@SuppressWarnings("unchecked")
 	/** Make the splits of the index structure. Bit structures split across multiple files are supported */
 	public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
 		HadoopUtility.loadTerrierJob(job);
-		
+
 		final String lookupStructureName = job.get(BITPOSTING_LOOKUP_STRUCTURE_KEY);
 		final String bitPostingStructureName = job.get(BITPOSTING_STRUCTURE_KEY);
 		Index.setIndexLoadingProfileAsRetrieval(false);
-		final IndexOnDisk index = HadoopUtility.fromHConfiguration(job);		
-		
+		final IndexOnDisk index = HadoopUtility.fromHConfiguration(job);
+
 		final byte fileCount = Byte.parseByte(index.getIndexProperty("index." + bitPostingStructureName + ".data-files", "1"));
 		final Path bitPostingStructureFiles[] = new Path[fileCount];
 		final FileStatus[] fss = new FileStatus[fileCount];
 		final long[] bitPostingStructureFSBlockSizes = new long[fileCount];
-		
+
 		logger.info("Calculating splits of structure " + bitPostingStructureName);
 		FileSystem fs = FileSystem.get(job);
 		for(byte i=0;i<fileCount;i++)
@@ -286,9 +286,9 @@ public class BitPostingIndexInputFormat extends FileInputFormat<IntWritable, Int
 			bitPostingStructureFSBlockSizes[i] = getBlockSize(bitPostingStructureFiles[i], fss[i]);
 			logger.info("File " + i + " approx splits=" + ((double)fss[i].getLen() /(double)bitPostingStructureFSBlockSizes[i]));
 		}
-		
+
 		//this smells of a hack, because we dont have a strategy for naming various index structures streams
-		final Iterator<? extends BitIndexPointer> offsetIterator = 
+		final Iterator<? extends BitIndexPointer> offsetIterator =
 			index.hasIndexStructureInputStream(lookupStructureName+ "-entry")
 				? (Iterator<? extends BitIndexPointer>)index.getIndexStructureInputStream(lookupStructureName+ "-entry")
 				: (Iterator<? extends BitIndexPointer>)index.getIndexStructureInputStream(lookupStructureName);
@@ -296,38 +296,38 @@ public class BitPostingIndexInputFormat extends FileInputFormat<IntWritable, Int
 		if (offsetIterator == null)
 			throw new IOException("No such stream structure called " + lookupStructureName+ "-entry or "+lookupStructureName+" found in index");
 		final List<InputSplit> splitList = new ArrayList<InputSplit>();
-		
+
 		int currentId = 0;
-		
+
 		//size of the current split of each file
 		final long[] blockSize = new long[fileCount];
 		//location of the last split for each file
 		final long[] bitPostingStructureSplitEndOffsets = new long[fileCount];
-		
+
 		//how many entries will be in this split, for each file
 		final int[] entriesInBlock = new int[fileCount];
 		//what is the starting id of the next entry split, for each file
 		final int[] firstEntryOfNextSplit = new int[fileCount];
-		
+
 		//number of splits per file, for logging only
 		final int[] splitsPerFile = new int[fileCount];
-		
+
 		Arrays.fill(firstEntryOfNextSplit, Integer.MAX_VALUE);
 
 		BitIndexPointer currentPointer = null;
 		//iterate through the lookup iterator
 		//split the target bit posting index structure into chunks of size bitPostingStructureFSBlockSize
 		while(offsetIterator.hasNext())
-		{			
+		{
 			//ok, where is the next pointer to
 			currentPointer = offsetIterator.next();
 			final byte fileId = currentPointer.getFileNumber();
-			
+
 			//what is the first entry of the next split of this file?
 			firstEntryOfNextSplit[fileId] = Math.min(currentId, firstEntryOfNextSplit[fileId]);
 			//this split will have one more entry
 			entriesInBlock[fileId]++;
-			
+
 			//what is our current offset?
 			long offset = currentPointer.getOffset();
 			//System.err.println("Offset" + offset);
@@ -339,8 +339,8 @@ public class BitPostingIndexInputFormat extends FileInputFormat<IntWritable, Int
 				//yes, its big enough
 				//block will be from bitPostingStructureSplitEndOffsets[fileId] to offset, which is blockSize[fileId]
 				BlockLocation[] blkLocations = fs.getFileBlockLocations(
-					fss[fileId], 
-					bitPostingStructureSplitEndOffsets[fileId], 
+					fss[fileId],
+					bitPostingStructureSplitEndOffsets[fileId],
 					blockSize[fileId]);
 				splitList.add(
 					new BitPostingIndexInputSplit(
@@ -358,13 +358,13 @@ public class BitPostingIndexInputFormat extends FileInputFormat<IntWritable, Int
 				//update recording of last offset for this file
 				bitPostingStructureSplitEndOffsets[fileId] = offset;
 				//reset size of split for this file
-				blockSize[fileId] = 0; 
+				blockSize[fileId] = 0;
 				//reset counter of entries in split of this file
 				entriesInBlock[fileId] = 0;
 				//reset the first offset of this split
 				firstEntryOfNextSplit[fileId] = Integer.MAX_VALUE;
 			}
-			
+
 			//ids always increment
 			currentId++;
 		}
@@ -375,7 +375,7 @@ public class BitPostingIndexInputFormat extends FileInputFormat<IntWritable, Int
 			if (entriesInBlock[fileId] == 0)
 				continue;
 			assert(firstEntryOfNextSplit[fileId] != Integer.MAX_VALUE);
-			
+
 			//block will be from bitPostingStructureSplitEndOffsets[fileId], with length blockSize[fileId]
 			BlockLocation[] blkLocations = fs.getFileBlockLocations(fss[fileId], bitPostingStructureSplitEndOffsets[fileId], blockSize[fileId]);
 			splitList.add(
@@ -387,7 +387,7 @@ public class BitPostingIndexInputFormat extends FileInputFormat<IntWritable, Int
 						firstEntryOfNextSplit[fileId], //first entry id for this split
 						entriesInBlock[fileId]) //number of entries in this split
 					);
-			logger.info("File "+ fileId + " trailing split "+ (splitList.size() -1) 
+			logger.info("File "+ fileId + " trailing split "+ (splitList.size() -1)
 				+ " " + splitList.get(splitList.size() -1).toString());
 
 			//record another split for this file (for logging only)
@@ -403,28 +403,28 @@ public class BitPostingIndexInputFormat extends FileInputFormat<IntWritable, Int
 		index.close();
 		return splitList.toArray(new InputSplit[splitList.size()]);
 	}
-	
+
 	/** Checks to see if required keys are present */
 	public void validateInput(JobConf job) throws IOException {
 		for (String k : new String[]{BITPOSTING_LOOKUP_STRUCTURE_KEY, BITPOSTING_STRUCTURE_KEY})
 		{
-			if (job.get(k, null) == null) 
+			if (job.get(k, null) == null)
 				throw new IOException("Required key "+ k + " not defined in job");
 		}
 	}
-	
+
 	/** Provides the starting entry id for the specified split */
 	public static int getSplit_StartingEntryIndex(InputSplit s)
 	{
 		return ((BitPostingIndexInputSplit)s).getStartingEntryIndex();
 	}
-	
+
 	/** Returns the number of entries in specified split */
 	public static int getSplit_EntryCount(InputSplit s)
 	{
 		return ((BitPostingIndexInputSplit)s).getEntryCount();
 	}
-	
+
 	/** Save in the JobConf, the names of the bit and pointer lookup structures that this inputformat should look for */
 	public static void setStructures(JobConf jc, String bitStructureName, String lookupStructureName)
 	{
@@ -433,8 +433,8 @@ public class BitPostingIndexInputFormat extends FileInputFormat<IntWritable, Int
 		jc.set(BITPOSTING_LOOKUP_STRUCTURE_KEY, lookupStructureName);
 	}
 
-	
-	
+
+
 	/** Test method, runs splits for inverted/lexicon with the command line specified index */
 	public static void main(String[] args) throws Exception
 	{
@@ -455,10 +455,17 @@ public class BitPostingIndexInputFormat extends FileInputFormat<IntWritable, Int
 			HadoopUtility.toHConfiguration(index, job);
 			index.close();
 			InputSplit s = new BitPostingIndexInputSplit(
-					new Path(args[3]), Long.parseLong(args[4]), Long.parseLong(args[5]), 
+					new Path(args[3]), Long.parseLong(args[4]), Long.parseLong(args[5]),
 					new String[0], Integer.parseInt(args[6]), Integer.parseInt(args[7]));
 			RecordReader<IntWritable, IntObjectWrapper<IterablePosting>> rr = new BitPostingIndexInputFormat().getRecordReader(s, job, new Reporter(){
 				public InputSplit getInputSplit() throws UnsupportedOperationException {return null;}
+
+				@Override
+				public float getProgress() {
+					// reporter param is unused in BitPostingIndexInputFormat
+					return 0;
+				}
+
 				@SuppressWarnings({ "rawtypes" })
 				public void incrCounter(Enum arg0, long arg1) {}
 				public void incrCounter(String arg0, String arg1, long arg2) {}

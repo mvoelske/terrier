@@ -20,11 +20,14 @@
   </licenses>
   <developers/>
   <dependencies>
-    <dependency>
-      <groupId>edu.uci</groupId>
-      <artifactId>jforests</artifactId>
-      <version>0.0.5-SNAPSHOT</version>
-    </dependency>
+  <dependency>
+    <groupId>edu.uci</groupId>
+    <artifactId>jforests</artifactId>
+    <version>0.5</version>
+    <scope>system</scope>
+    <!-- jforests seems to have disappeared from public Maven repositories -->
+    <systemPath>${project.basedir}/lib/jforests-0.5.jar</systemPath>
+  </dependency>
     <dependency>
       <groupId>antlr</groupId>
       <artifactId>antlr</artifactId>
@@ -68,8 +71,13 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-core</artifactId>
-      <version>0.20.205.0</version>
+      <artifactId>hadoop-common</artifactId>
+      <version>2.7.1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-core</artifactId>
+      <version>2.7.1</version>
     </dependency>
     <dependency>
       <groupId>org.apache.pdfbox</groupId>

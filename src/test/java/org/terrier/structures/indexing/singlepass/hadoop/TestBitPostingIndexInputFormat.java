@@ -82,6 +82,12 @@ public class TestBitPostingIndexInputFormat extends ApplicationSetupBasedTest {
 		public InputSplit getInputSplit() throws UnsupportedOperationException {
 			return null;
 		}
+
+		@Override
+		public float getProgress() {
+			return 0;
+		}
+
 		@Override
 		public void incrCounter(Enum<?> arg0, long arg1) {			
 		}
