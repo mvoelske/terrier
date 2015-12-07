@@ -211,6 +211,7 @@ public class HadoopUtility {
 	 * leftover files */
 	public static void makeTerrierJob(JobConf jobConf) throws IOException
 	{
+		logger.info("Creating Terrier Job with %s".format(jobConf.toString()));
 		if (jobConf.get("mapred.job.tracker").equals("local"))
 			return;
 		try{
